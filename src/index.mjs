@@ -5,11 +5,6 @@ import { logging } from './utils/logging.mjs';
 const CONFIG_PATH = './configs.json';
 let configs = { log: false, time: '00:00:00' };  // 默认值
 
-// const myUserAgent = {
-//     desktop: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-//     mobile: 'Mozilla/5.0 (Android 14; Mobile; rv:141.0) Gecko/141.0 Firefox/141.0'
-// };
-
 async function main() {
     try {
         const userConfigs = await getConfigs(CONFIG_PATH);

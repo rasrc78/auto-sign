@@ -2,7 +2,7 @@
 
 解放你的双手，把时间花在更有意义的事情上。
 
-> 练习项目，不保证稳定性。遇到错误可以提交[Issues](https://github.com/Sh2-103/auto-signin/issues)。
+> 练习项目，不保证稳定性。遇到错误可以提交 [Issues](https://github.com/Sh2-103/auto-signin/issues)。
 
 ## 环境准备
 
@@ -11,7 +11,7 @@
 - Node.js (>= 24.14.0)
 - npm
 
-若还没有安装，可以在 [Node.js 官网](https://nodejs.org/zh-cn/download)获取。
+若还没有安装，可以在[Node.js 官网](https://nodejs.org/zh-cn/download)获取。
 
 ## 快速开始
 
@@ -24,7 +24,10 @@ npm install
 运行脚本：
 
 ```bash
-npm start # 或 npm src/index.mjs
+npm start
+
+# 或者
+node src/index.mjs
 ```
 
 ## 签到配置
