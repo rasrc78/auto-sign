@@ -1,161 +1,47 @@
-import { readFile, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
-import { logging } from './utils/logging.mjs';
+import { config, saveConfig } from './utils/config.mjs';
+import { Logger } from './utils/logger.mjs';
+import { Scheduler } from './utils/scheduler.mjs'
 
-const CONFIG_PATH = './configs.json';
-let configs = { log: false, time: '00:00:00' };  // 默认值
+const logger = new Logger('Main');
 
 async function main() {
-    try {
-        const userConfigs = await getConfigs(CONFIG_PATH);
-        configs = Object.assign(configs, userConfigs)
-    } catch (err) {
-        logging('Failed to read configuration file.', 'ERROR', {fileOutput: configs.log})
-        throw err;
-    }
-    
-    const servicesNames = Object.keys(configs.services);
-    for (const name of servicesNames) {
-        let passwd = configs.services[name].password;
-        if (passwd) {
-            configs.services[name].password = await passwdToHash(passwd, name)
-        }
+    const serviceNames = Object.keys(config).filter(v => v !== 'general');
+    const serviceToChinese = {
+        zaimanhua: '再漫画'
     }
 
-    let schedulePolicy = {
+    const schedulePolicy = {
         getNextRunTime(now) {
             const nowDate = new Date(now);
-            return new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() + 1, ...(configs.time.split(':'))).getTime();
+            return new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() + 1, ...(config.general.schedule.split(':'))).getTime();
         }
     };
 
-    let task = {
+    const taskPolicy = {
         async run() {
-            for (const name of servicesNames) {
+            for (const name of serviceNames) {
                 const service = await import(`./services/${name}.mjs`)
-                const result = await service.runTask(configs.services[name]);  // 会返回 Cookie 字符串。
-                configs.services[name].cookie = result
-                logging(`Successfully executed sign-in task for ${name}.`, 'INFO', {fileOutput: configs.log})
+                const taskReturn = await service.runTask(config[name]);
+                config[name] = taskReturn
+
+                logger.info(`签到任务执行成功：${serviceToChinese[name]}`)
             }
         },
         async onError(err) {
-            logging(err, 'ERROR', {fileOutput: configs.log})
+            logger.error(err)
         },
         async onComplete() {
-            await setConfigs(CONFIG_PATH, configs)
+            saveConfig(config)
         }
     }
     
-    const schedule = createScheduler({task, schedulePolicy})
-    schedule.start()
-    schedule.runOnce()
+    const scheduler = new Scheduler(taskPolicy, schedulePolicy)
+    scheduler.start()
+    scheduler.execTask()
 }
 
-/**
- * @async
- * @param {PathLike} configFile 
- * @param {object} configs
- */
-async function setConfigs(configFile, configs = {}) {
-    writeFile(configFile, JSON.stringify(configs, null, 2), {encoding:'utf-8', mode: 0o664})
-} 
-
-/**
- * @async
- * @param {PathLike} configFile 
- * @returns {Promise<object>}
- */
-async function getConfigs(configFile) {
-    const configs = JSON.parse(await readFile(configFile, {encoding: 'utf-8'}));
-    return configs;
-} 
-
-async function passwdToHash(passwd, serviceName) {
-    const loggingError = (err) => logging(err, 'ERROR', {fileOutput: configs.log})
-    const generateMD5 = (text) => createHash('md5').update(text).digest('hex');
-
-    const md5Regex = /^[0-9a-f]{32}$/i;
-    const converter = {
-        zaimanhua(passwd) {
-            return md5Regex.test(passwd) ? passwd : generateMD5(passwd);
-        }
-    };
-
-    if (!converter[serviceName]) {
-        const err = new Error(`No password processing rules for "${serviceName}" could be found.`)
-        loggingError(err)
-        throw err;
-    }
-
-    const hash = converter[serviceName](passwd);
-    if (!hash) {
-        const err = new Error('Error in processing password.')
-        loggingError(err)
-        throw err;
-    }
-    
-    return hash;
+try {
+    await main()
+} catch(err) {
+    logger.error(err)
 }
-
-/**
- * 
- * @param {object} param0
- * @param {object} param0.task
- * @param {Function} param0.task.run
- * @param {Function} param0.task.onError
- * @param {Function} param0.task.onComplete
- * @param {object} param0.schedulePolicy
- * @param {Function} param0.schedulePolicy.getNextRunTime
- * @returns 
- */
-function createScheduler({task, schedulePolicy}) {
-    let timerId = null;
-    let active = false;
-    let lastRunAt = null;
-    let nextRunAt = null;
-
-    function scheduleNext() {
-        if (!active) return;
-
-        const now = Date.now();
-        nextRunAt = schedulePolicy.getNextRunTime(now);
-        const delay = Math.max(0, nextRunAt - now);
-
-        timerId = setTimeout(onTimeout, delay)
-    }
-
-    async function onTimeout() {
-        if (!active) return;
-
-        lastRunAt = Date.now()
-
-        try {
-            await task.run()
-        } catch(err) {
-            await task.onError(err)
-        } finally {
-            await task.onComplete()
-            scheduleNext()
-        }
-    }
-
-    return {
-        start() {
-            if (active) return;
-            active = true
-            scheduleNext()
-        },
-        stop() {
-            active = false
-            if (timerId) {
-                clearTimeout(timerId)
-                timerId = null
-            }
-        },
-        nextRun() { return nextRunAt; },
-        lastRun() { return lastRunAt; },
-        async runOnce() { await onTimeout() }
-    }
-}
-
-await main()

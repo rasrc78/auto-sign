@@ -2,7 +2,7 @@
 
 解放你的双手，把时间花在更有意义的事情上。
 
-> 练习项目，不保证稳定性。遇到错误可以提交 [Issues](https://github.com/Sh2-103/auto-signin/issues)。
+> 经过一次**破坏性重写**，如果你使用的是*2026.3.15*之前的版本，请更新并重新阅读*README*文件。
 
 ## 环境准备
 
@@ -32,32 +32,39 @@ node src/index.mjs
 
 ## 签到配置
 
-在运行目录下创建`configs.json`，或者自行修改`src/index.mjs`中的`CONFIG_PATH`，以更改文件路径。
+在运行目录下创建`config.json`，配置项如下：
 
 **格式**：
 
-- `log`：主脚本的日志文件开关，默认`false`。
-- `time`：每日签到时间，格式`hh:mm:ss`，默认`00:00:00`。
-- `services`
-  - 平台名：需要签到的平台名称，同平台可共存多个任务。目前只支持`zaimanhua`。
-    - `log`：每个任务的日志开关。
-    - `username`：用户名，或登录账号。
-    - `password`：明文密码或平台登录使用的哈希值。明文密码会自动替换为哈希值，当明文密码和哈希值格式一致时**不会进行替换**。如果你不是有意为之，可能会导致错误。
+- `general`：通用选项，适用于所有服务。
+  - `[通用配置项]`
+- `<服务名>`：可以在下面的列表中查看支持的服务。
+  - `[服务配置项]`
+
+**通用配置项**：
+
+- `general`
+  - `logPath`：日志文件路径，值为`false`或不存在表示关闭日志文件输出。
+  - `schedule`：每日签到时间，格式`hh:mm:ss`，默认`00:00:00`。
+
+**服务：再漫画**
+- `zaimanhua`：记得使用这个名字替换`<服务名>`。
     - `cookie`：用于登录的[Cookie](#获取-cookie)，一般填了这个就不用再填账号密码。
-    - `user-agent`：用户代理 (User agent)，默认为空。
+    - `username`：*用户名* 或 *登录账号*。
+    - `password`：*明文密码* 或 *明文密码的小写MD5*。如果输入的是明文密码，会在首次运行时替换为哈希值。注意，如果明文密码格式和MD5相同，则不会进行自动替换。
+    - `userAgent`：用户代理 (User agent)，默认为空。
 
 **示例**：
 
 ```json
 {
-  "log": false,
-  "time": "11:22:33",
-  "services": {
-    "zaimanhua": {
-      "log": true,
+  "general" : {
+    "logPath": "./logs",
+    "schedule": "00:22:22"
+  },
+  "zaimanhua": {
       "cookie": "token=XXXXX",
-      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.7559.53 Safari/537.36"
-    }
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.7559.53 Safari/537.36"
   }
 }
 ```

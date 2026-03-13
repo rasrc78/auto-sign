@@ -1,8 +1,5 @@
 {
   "type": "module",
-  "dependencies": {
-    "tough-cookie": "^6.0.0"
-  },
   "scripts": {
     "start": "node src/index.mjs"
   }

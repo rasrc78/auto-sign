@@ -1,29 +1,40 @@
-import { createSession } from '../utils/session.mjs'
-import { logging } from '../utils/logging.mjs';
+import { createHash } from 'node:crypto';
+import { Session } from '../utils/session.mjs'
+import { Logger } from '../utils/logger.mjs';
 
-const session = createSession();
+
+const logger = new Logger('ZaiManHua');
+const cookieId = 'zaimanhua';
+const session = new Session(cookieId);
 const indexUrl = new URL('https://www.zaimanhua.com');
-let configs = { log: false };
+let config = null;
 
 async function getCaptchaId(init = {}) {
     try {
-        const res = await session.fetch(indexUrl, {...init});
+        const res = await session.fetch(indexUrl, {init: init});
         const text = await res.text()
         const regex = /captchaId:\s*(['"])(\w{8}(-\w{4}){3}-\w{12})\1/i;  // 没有必要严格匹配UUID。
         return ((text.match(regex)) || [])[2] || '';
     } catch(err) {
-        logging('[ZaiManHua] Failed to get chaptcha ID.', 'WARN', {fileOutput: configs.log})
-        logging(err, 'ERROR', {fileOutput: configs.log})
+        logger.warn('获取 CAPTCHA ID 失败')
+        logger.error(err)
         return '';
     }
 
 }
 
-async function exportToken(url) {
-    const cookies = await session.getCookies(url);
+function exportToken() {
+    const cookies = session.getCookies(cookieId);
     const token = cookies.match(/(?:^|;\s*)token=([^;]+)/)?.[1];
-    if (!token) throw new Error('Failed to get token.');
+    if (!token) throw new Error('Failed to match token.');
     return token;
+}
+
+function passwdToHash(passwd) {
+    const generateMD5 = (text) => createHash('md5').update(text).digest('hex');
+    const md5Regex = /^[0-9a-f]{32}$/;
+
+    return md5Regex.test(passwd) ? passwd : generateMD5(passwd);
 }
 
 async function login(username, password, init = {}) {
@@ -37,27 +48,35 @@ async function login(username, password, init = {}) {
             captchaResult: '%5B%5D',
             captchaCate: 2
         }
-        const res = await session.fetch(loginUrl, {...init, 
-            method: 'POST', 
-            headers: {...init.headers, referer: indexUrl.href, "content-type": "application/json"}, 
-            body: JSON.stringify(loginData)
+        const headers = {
+            ...init.headers,
+            referer: indexUrl.href,
+            "content-type": "application/json"
+        }
+        const res = await session.fetch(url, {
+            init: {
+                ...init, 
+                method: 'POST', 
+                headers: headers, 
+                body: JSON.stringify(loginData)
+            }
         });
 
         if (!res.ok) {
-            throw new Error(`Rejected when logging in as ${username} | Status Code: ${res.status}`);
-        }
-        
-        const userInfo = await res.json();
-
-        if (userInfo.errno !== 0) {
-            throw new Error(`Rejected when logging in as ${username}. | Error Code: ${userInfo.errno}, Error Message: ${userInfo.errmsg}`);
+            throw new Error(`Status Code: ${res.status}`);
         }
 
-        return userInfo.data.user;
+        const resJSON = await res.json();
+        if (resJSON.errno !== 0) {
+            throw new Error(`Error Code: ${resJSON.errno}, Error Message: ${resJSON.errmsg}`);
+        }
 
-        
+        const userInfo = resJSON.data.user;
+        session.setCookies(`token=${userInfo.token}`, cookieId)
+
+        return userInfo;
     } catch (err) {
-        logging(`[ZaiManHua] An error occurred during logging in as ${username}.`, 'ERROR', {fileOutput: configs.log})
+        logger.error(`登录时发生错误 | Username: ${username}`)
         throw err;
     }
 }
@@ -65,24 +84,24 @@ async function login(username, password, init = {}) {
 async function signin(init = {}) {
     try {
         const url = new URL('https://i.zaimanhua.com/lpi/v1/task/sign_in');
-        const token = await exportToken(url);
+        const token = exportToken();
         const headers = {
             ...init.headers,
             authorization: `Bearer ${token}`,
-            referer: 'https://i.zaimanhua.com/'
+            referer: url.origin + '/'
         };
 
-        const res = await session.fetch(url, {...init, headers: headers, method: 'POST'});
+        const res = await session.fetch(url, {init: {...init, headers: headers, method: 'POST'}});
         if (!res.ok) {
-            throw new Error(`Failed to sign in. | Status Code: ${res.status}`);
+            throw new Error(`Status Code: ${res.status}`);
         }
 
         const msg = await res.json();
         if (msg.errno !== 0) {
-            throw new Error(`Failed to sign in. | Error Code: ${msg.errno}, Error Message: ${msg.errmsg}`);
+            throw new Error(`Error Code: ${msg.errno}, Error Message: ${msg.errmsg}`);
         }
     } catch(err) {
-        logging(`[ZaiManHua] An error occurred during sign-in.`, 'ERROR', {fileOutput: configs.log})
+        logger.error(`签到时发生错误 | Username: ${config.username}`)
         throw err;
     }
 }
@@ -90,60 +109,59 @@ async function signin(init = {}) {
 async function getUserInfo(init = {}) {
     try {
         const url = new URL('https://account-api.zaimanhua.com/v1/userInfo/get');
-        const token = await exportToken(url);
+        const token = exportToken();
         const headers = {
             ...init.headers,
             authorization: `Bearer ${token}`,
             referer: indexUrl.href
         };
 
-        const res = await session.fetch(url, {...init, headers: headers, method: 'GET'});
+        const res = await session.fetch(url, {init: {...init, headers: headers, method: 'GET'}});
         if (!res.ok) {
-            throw new Error(`Failed to get user information. | Status Code: ${res.status}`);
+            throw new Error(`Status Code: ${res.status}`);
         }
         
-        const data = await res.json();
-        if (data.errno !== 0) {
-            throw new Error(`Failed to get user information. | Error Code: ${data.errno}, Error Message: ${data.errmsg}`);
+        const resJSON = await res.json();
+        if (resJSON.errno !== 0) {
+            throw new Error(`Error Code: ${resJSON.errno}, Error Message: ${resJSON.errmsg}`);
         }
 
-        return data.data.userInfo;
+        return resJSON.data.userInfo;
     } catch(err) {
-        logging(`[ZaiManHua] An error occurred during getting user info.`, 'ERROR', {fileOutput: configs.log})
+        logger.error(`获取用户信息时发生错误 | ${config.username}`)
         throw err;
     }
 }
 
 /**
  * 
- * @param {object} taskConfigs
- * @returns {string} Cookies
+ * @param {object} taskConfig
+ * @returns {string} taskConfig
  */
-export async function runTask(taskConfigs) {
+export async function runTask(taskConfig) {
     try {
-        configs = taskConfigs
+        config = taskConfig
+        config.password = passwdToHash(config.password)
         const baseHeaders = {
-            'user-agent': configs['user-agent'],
             'accept': '*/*',
-            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8'
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'user-agent': config.userAgent
         }
 
-        let userInfo;
-        if (configs.cookie) {
-            session.setCookies(configs.cookie, indexUrl)
-            userInfo = await getUserInfo({headers: baseHeaders})
-            session.setCookies(`token=${userInfo.token}`, indexUrl)
+        if (config.cookie) {
+            session.setCookies(config.cookie, cookieId)
         } else {
-            userInfo = await login(configs.username, configs.password, {headers: baseHeaders}, {enableLog: configs.log})
-            session.setCookies(`token=${userInfo.token}`, indexUrl)
+            await login(config.username, config.password, {headers: baseHeaders});
         }
-
+        const userInfo = await getUserInfo({headers: baseHeaders});
+        session.setCookies(`token=${userInfo.token}`, cookieId)
 
         await signin({headers: baseHeaders})
     } catch(err) {
-        logging(err, 'ERROR', {fileOutput: configs.log})
-        throw new Error('Failed to execute sign-in task for zaimanhua.');
+        logger.error(err)
+        throw new Error('签到任务执行失败：再漫画');
     } finally {
-        return session.getCookies(indexUrl);
+        config.cookie = session.getCookies(cookieId)
+        return config;
     }
 }
