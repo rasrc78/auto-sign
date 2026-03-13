@@ -94,8 +94,8 @@
 - `errno`：**num** | 错误码，重复签到为`1`，未登录为`99`
 - `errmsg`：**str** | 错误提示
 - `data`：**obj** | 数据部分
-  - `userCurrency`：obj | 用户积分信息
-    - `credits`：num | 积分
+  - `userCurrency`：**obj** | 用户积分信息
+    - `credits`：**num** | 积分
     - `silver`
     - `stars`
   - `task`：**obj** | 任务列表
@@ -103,29 +103,29 @@
       - `[任务条目数据]`
     - `newUserTask`：**arr** | 新人任务
       - `[任务条目数据]`
-    - `signInfo`：obj | 每日签到
-      - `currentDay`：num | 当前签到天数
-      - `currentSign`：bool | 签到状态
-      - `list`：arr
+    - `signInfo`：**obj** | 每日签到
+      - `currentDay`：**num** | 当前签到天数
+      - `currentSign`：**bool** | 签到状态
+      - `list`：**arr**
         - `[任务条目数据]`
-    - `sumSignTask`：obj | 累计签到
-      - `continuousSignDays`：num | 连续签到天数
-      - `sumSignDays`：num | 累计签到天数
-      - `list`：arr
+    - `sumSignTask`：**obj** | 累计签到
+      - `continuousSignDays`：**num** | 连续签到天数
+      - `sumSignDays`：**num** | 累计签到天数
+      - `list`：**arr**
         - `[任务条目数据]`
 
 **任务条目数据**：
 
-- `id`：num | 任务ID
-- `title`：str | 任务名称
-- `desc`：str | 任务描述
-- `currency`：obj | 任务奖励
-  - `credits`：num | 积分
+- `id`：**num** | 任务ID
+- `title`：**str** | 任务名称
+- `desc`：**str** | 任务描述
+- `currency`：**obj** | 任务奖励
+  - `credits`：**num** | 积分
   - `silver`
   - `stars`
   - `vip`
-- `status`：num | 完成状态，`1`为未完成，`3`为完成
-- `icon`：str | 任务图标URL
+- `status`：**num** | 完成状态，`1`为未完成，`3`为完成
+- `icon`：**str** | 任务图标URL
 
 ## 杂项
 
