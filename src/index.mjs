@@ -7,7 +7,9 @@ const logger = new Logger('Main');
 async function main() {
     const serviceNames = Object.keys(config).filter(v => v !== 'general');
     const serviceToChinese = {
-        zaimanhua: '再漫画'
+        zaimanhua: '再漫画',
+        yamibo: '百合会',
+        acgripcom: 'Anime字幕论坛'
     }
 
     const schedulePolicy = {
@@ -22,7 +24,9 @@ async function main() {
             for (const name of serviceNames) {
                 const service = await import(`./services/${name}.mjs`)
                 const taskReturn = await service.runTask(config[name]);
-                config[name] = taskReturn
+                if (taskReturn) {
+                    config[name] = taskReturn
+                }
 
                 logger.info(`签到任务执行成功：${serviceToChinese[name]}`)
             }
