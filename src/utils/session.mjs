@@ -1,6 +1,6 @@
 import { URL } from 'node:url';
 
-export class Cookie {
+class Cookie {
     constructor() {
         this._cookieMaps = new Map();
         this._cookieMaps.set('default', new Map())
@@ -72,10 +72,14 @@ export class Session {
 
         const response = await fetch(url, {...init, headers: headers, redirect: 'manual'});  // `init`相当于`fetch()`的同名参数。
 
-        const setCookieHeader = response.headers.get('set-cookie');
-        if (setCookieHeader) setCookieHeader.split(',').forEach(cookie => {
+        const setCookieHeader = response.headers.getSetCookie();
+        if (setCookieHeader) setCookieHeader.forEach(cookie => {
             this.cookieJar.setCookie(cookie, cookieID)
         })
+        // const setCookieHeader = response.headers.get('set-cookie');
+        // if (setCookieHeader) setCookieHeader.split(',').forEach(cookie => {
+        //     this.cookieJar.setCookie(cookie, cookieID)
+        // })
 
         // 处理重定向
         if (/^(3\d\d|201)$/.test(response.status)) {
