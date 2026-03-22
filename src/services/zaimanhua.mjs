@@ -11,8 +11,7 @@ let config = null;
 
 async function getCaptchaId(init = {}) {
     try {
-        const res = await session.fetch(indexUrl, {init: init});
-        const text = await res.text()
+        const text = await (await session.fetch(indexUrl, { init: init })).text();
         const regex = /captchaId:\s*(['"])(\w{8}(-\w{4}){3}-\w{12})\1/i;  // 没有必要严格匹配UUID。
         return ((text.match(regex)) || [])[2] || '';
     } catch(err) {
@@ -40,7 +39,7 @@ function passwdToHash(passwd) {
 async function login(username, password, init = {}) {
     try {
         const url = new URL('https://manhua.zaimanhua.com/lpi/v1/login/passwd');
-        const captchaId = await getCaptchaId({...init});
+        const captchaId = await getCaptchaId({ ...init });
         const loginData = {
             username: username,
             passwd: password,
@@ -49,24 +48,22 @@ async function login(username, password, init = {}) {
             captchaCate: 2
         }
         const headers = {
-            ...init.headers,
-            referer: indexUrl.href,
-            "content-type": "application/json"
+            ...init?.headers,
+            referer: indexUrl.href
         }
-        const res = await session.fetch(url, {
-            init: {
+        init = {
                 ...init, 
                 method: 'POST', 
                 headers: headers, 
                 body: JSON.stringify(loginData)
-            }
-        });
-
-        if (!res.ok) {
-            throw new Error(`Status Code: ${res.status}`);
         }
 
-        const resJSON = await res.json();
+        const resp = await session.fetch(url, { init });
+        if (!resp.ok) {
+            throw new Error(`Status Code: ${resp.status}`);
+        }
+
+        const resJSON = await resp.json();
         if (resJSON.errno !== 0) {
             throw new Error(`Error Code: ${resJSON.errno}, Error Message: ${resJSON.errmsg}`);
         }
@@ -76,7 +73,7 @@ async function login(username, password, init = {}) {
 
         return userInfo;
     } catch (err) {
-        logger.error(`登录时发生错误 | Username: ${username}`)
+        logger.error(`登录时发生错误`)
         throw err;
     }
 }
@@ -86,22 +83,22 @@ async function signin(init = {}) {
         const url = new URL('https://i.zaimanhua.com/lpi/v1/task/sign_in');
         const token = exportToken();
         const headers = {
-            ...init.headers,
+            ...init?.headers,
             authorization: `Bearer ${token}`,
             referer: url.origin + '/'
         };
 
-        const res = await session.fetch(url, {init: {...init, headers: headers, method: 'POST'}});
-        if (!res.ok) {
-            throw new Error(`Status Code: ${res.status}`);
+        const resp = await session.fetch(url, { init: { ...init, headers: headers, method: 'POST' } });
+        if (!resp.ok) {
+            throw new Error(`Status Code: ${resp.status}`);
         }
 
-        const msg = await res.json();
+        const msg = await resp.json();
         if (msg.errno !== 0) {
             throw new Error(`Error Code: ${msg.errno}, Error Message: ${msg.errmsg}`);
         }
     } catch(err) {
-        logger.error(`签到时发生错误 | Username: ${config.username}`)
+        logger.error(`签到时发生错误`)
         throw err;
     }
 }
@@ -111,24 +108,24 @@ async function getUserInfo(init = {}) {
         const url = new URL('https://account-api.zaimanhua.com/v1/userInfo/get');
         const token = exportToken();
         const headers = {
-            ...init.headers,
+            ...init?.headers,
             authorization: `Bearer ${token}`,
             referer: indexUrl.href
         };
 
-        const res = await session.fetch(url, {init: {...init, headers: headers, method: 'GET'}});
-        if (!res.ok) {
-            throw new Error(`Status Code: ${res.status}`);
+        const resp = await session.fetch(url, { init: { ...init, headers: headers, method: 'GET' } });
+        if (!resp.ok) {
+            throw new Error(`Status Code: ${resp.status}`);
         }
         
-        const resJSON = await res.json();
+        const resJSON = await resp.json();
         if (resJSON.errno !== 0) {
             throw new Error(`Error Code: ${resJSON.errno}, Error Message: ${resJSON.errmsg}`);
         }
 
         return resJSON.data.userInfo;
     } catch(err) {
-        logger.error(`获取用户信息时发生错误 | ${config.username}`)
+        logger.error(`获取用户信息时发生错误`)
         throw err;
     }
 }
@@ -143,7 +140,6 @@ export async function runTask(taskConfig) {
         config = taskConfig
         config.password = passwdToHash(config.password)
         const baseHeaders = {
-            'accept': '*/*',
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'user-agent': config.userAgent
         }
@@ -151,12 +147,12 @@ export async function runTask(taskConfig) {
         if (config.cookie) {
             session.setCookies(config.cookie, cookieId)
         } else {
-            await login(config.username, config.password, {headers: baseHeaders});
+            await login(config.username, config.password, { headers: baseHeaders });
         }
-        const userInfo = await getUserInfo({headers: baseHeaders});
+        const userInfo = await getUserInfo({ headers: baseHeaders });
         session.setCookies(`token=${userInfo.token}`, cookieId)
 
-        await signin({headers: baseHeaders})
+        await signin({ headers: baseHeaders })
     } catch(err) {
         logger.error(err)
         throw new Error('签到任务执行失败：再漫画');
