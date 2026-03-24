@@ -31,7 +31,7 @@ class Cookie {
         return cookies.join(';');
     }
 
-    getCookies(identifier = 'default') {
+    getObject(identifier = 'default') {
         const cookieMap = this._getCookieMap(identifier);
         return Object.fromEntries(cookieMap.entries());
     }
@@ -63,6 +63,10 @@ export class Session {
      */
     getCookies(cookieID = this.cookieID) {
         return this.cookieJar.getHeaderString(cookieID)
+    }
+    
+    getCookieJar() {
+        return this.cookieJar;
     }
 
     async fetch(url, {init = {}, cookieID = this.cookieID} = {}) {
