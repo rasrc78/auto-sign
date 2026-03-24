@@ -2,10 +2,14 @@ import path from 'node:path';
 import { appendFile, mkdir } from 'node:fs/promises';
 import { config } from './config.mjs';
 
+
+const LOG_DIR = config?.general?.logPath;  // <string> 或 undefined
+const LOG_FILE_NAME = path.join(LOG_DIR, `${Date.now()}.log`);
+
 export class Logger {
     constructor(appName) {
         this.appName = appName
-        this.logDir = config?.general?.logPath;  // <string> 或 undefined
+        this.fileOutput = LOG_DIR ? true : false 
     }
 
     /**
@@ -15,8 +19,8 @@ export class Logger {
      * @param {('DEBUG' | 'INFO' | 'WARN' | 'ERROR')} level
      */
     async logging(message, level = 'INFO') {
-        const now = new Date()
-        const allowLevels = new Set(['DEBUG', 'INFO', 'WARN', 'ERROR'])
+        const now = new Date();
+        const allowLevels = new Set(['DEBUG', 'INFO', 'WARN', 'ERROR']);
 
         if (message instanceof Error) {
             message = message.stack.split('\n').slice(0, 2).map(str => str.trim()).join(' | ')
@@ -28,14 +32,13 @@ export class Logger {
         message = `[${now.toISOString()}][${level}]${appName} ${message}`
         console.log(message)
 
-        if (!this.logDir) return;
+        if (!this.fileOutput) return;
 
         try {
-            const logFile = path.join(this.logDir, `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}.log`);
-            await mkdir(path.join(this.logDir), {recursive: true})
-            await appendFile(logFile, String(message) + '\n', {mode: 0o664})
+            await mkdir(path.join(LOG_DIR), { recursive: true })
+            await appendFile(LOG_FILE_NAME, String(message) + '\n', { mode: 0o664 })
         } catch(err) {
-            this.logDir = false
+            this.fileOutput = false
             await this.logging('写入日志文件时出错，已关闭日志文件输出', 'ERROR')
             await this.logging(err, 'ERROR')
         }
