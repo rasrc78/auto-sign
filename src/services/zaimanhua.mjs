@@ -2,10 +2,10 @@ import { createHash } from 'node:crypto';
 import { Session } from '../utils/session.mjs'
 import { Logger } from '../utils/logger.mjs';
 
+const COOKIE_ID = 'zaimanhua';
 
 const logger = new Logger('ZaiManHua');
-const cookieId = 'zaimanhua';
-const session = new Session(cookieId);
+const session = new Session(COOKIE_ID);
 const indexUrl = new URL('https://www.zaimanhua.com');
 let config = null;
 
@@ -23,9 +23,10 @@ async function getCaptchaId(init = {}) {
 }
 
 function exportToken() {
-    const cookies = session.getCookies(cookieId);
-    const token = cookies.match(/(?:^|;\s*)token=([^;]+)/)?.[1];
-    if (!token) throw new Error('Failed to match token.');
+    const cookieJar = session.getCookieJar();
+    const token = cookieJar.getObject(COOKIE_ID)?.token;
+    if (!token) throw new Error('Token not found.');
+
     return token;
 }
 
@@ -52,28 +53,28 @@ async function login(username, password, init = {}) {
             referer: indexUrl.href
         }
         init = {
-                ...init, 
-                method: 'POST', 
-                headers: headers, 
-                body: JSON.stringify(loginData)
+            ...init, 
+            method: 'POST', 
+            headers: headers, 
+            body: JSON.stringify(loginData)
         }
 
         const resp = await session.fetch(url, { init });
         if (!resp.ok) {
-            throw new Error(`Status Code: ${resp.status}`);
+            throw new Error(`HTTP error | status_code=${resp.status}`);
         }
 
         const resJSON = await resp.json();
         if (resJSON.errno !== 0) {
-            throw new Error(`Error Code: ${resJSON.errno}, Error Message: ${resJSON.errmsg}`);
+            throw new Error(`Request rejected | errno=${resJSON.errno}, errmsg: ${resJSON.errmsg}`);
         }
 
         const userInfo = resJSON.data.user;
-        session.setCookies(`token=${userInfo.token}`, cookieId)
+        session.setCookies(`token=${userInfo.token}`, COOKIE_ID)
 
         return userInfo;
     } catch (err) {
-        logger.error(`登录时发生错误`)
+        logger.error(`登录时发生错误 | username=${username}`)
         throw err;
     }
 }
@@ -90,12 +91,12 @@ async function signin(init = {}) {
 
         const resp = await session.fetch(url, { init: { ...init, headers: headers, method: 'POST' } });
         if (!resp.ok) {
-            throw new Error(`Status Code: ${resp.status}`);
+            throw new Error(`HTTP error | status_code=${resp.status}`);
         }
 
-        const msg = await resp.json();
+        const resJSON = await resp.json();
         if (msg.errno !== 0) {
-            throw new Error(`Error Code: ${msg.errno}, Error Message: ${msg.errmsg}`);
+            throw new Error(`Request rejected | errno=${resJSON.errno}, errmsg=${resJSON.errmsg}`);
         }
     } catch(err) {
         logger.error(`签到时发生错误`)
@@ -115,12 +116,12 @@ async function getUserInfo(init = {}) {
 
         const resp = await session.fetch(url, { init: { ...init, headers: headers, method: 'GET' } });
         if (!resp.ok) {
-            throw new Error(`Status Code: ${resp.status}`);
+            throw new Error(`HTTP error | status_code=${resp.status}`);
         }
         
         const resJSON = await resp.json();
         if (resJSON.errno !== 0) {
-            throw new Error(`Error Code: ${resJSON.errno}, Error Message: ${resJSON.errmsg}`);
+            throw new Error(`Request rejected | errno=${resJSON.errno}, errmsg=${resJSON.errmsg}`);
         }
 
         return resJSON.data.userInfo;
@@ -145,19 +146,19 @@ export async function runTask(taskConfig) {
         }
 
         if (config.cookie) {
-            session.setCookies(config.cookie, cookieId)
+            session.setCookies(config.cookie, COOKIE_ID)
         } else {
             await login(config.username, config.password, { headers: baseHeaders });
         }
         const userInfo = await getUserInfo({ headers: baseHeaders });
-        session.setCookies(`token=${userInfo.token}`, cookieId)
+        session.setCookies(`token=${userInfo.token}`, COOKIE_ID)
 
         await signin({ headers: baseHeaders })
     } catch(err) {
         logger.error(err)
-        throw new Error('签到任务执行失败：再漫画');
+        throw new Error(`签到任务执行失败 | service_name=zaimanhua`);
     } finally {
-        config.cookie = session.getCookies(cookieId)
+        config.cookie = session.getCookies(COOKIE_ID)
         return config;
     }
 }

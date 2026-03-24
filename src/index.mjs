@@ -6,11 +6,6 @@ const logger = new Logger('Main');
 
 async function main() {
     const serviceNames = Object.keys(config).filter(v => v !== 'general');
-    const serviceToChinese = {
-        zaimanhua: '再漫画',
-        yamibo: '百合会',
-        acgripcom: 'Anime字幕论坛'
-    }
 
     const schedulePolicy = {
         getNextRunTime(now) {
@@ -23,12 +18,12 @@ async function main() {
         async run() {
             for (const name of serviceNames) {
                 const service = await import(`./services/${name}.mjs`)
-                const taskReturn = await service.runTask(config[name]);
+                const taskReturn = await service.runTask(config[name]); // 预期是返回该服务的配置文件
                 if (taskReturn) {
                     config[name] = taskReturn
                 }
 
-                logger.info(`签到任务执行成功：${serviceToChinese[name]}`)
+                logger.info(`签到任务执行成功 | service_name=${name}`)
             }
         },
         async onError(err) {
@@ -48,4 +43,5 @@ try {
     await main()
 } catch(err) {
     logger.error(err)
+    process.exit(1);
 }
