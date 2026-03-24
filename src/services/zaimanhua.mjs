@@ -95,7 +95,7 @@ async function signin(init = {}) {
         }
 
         const resJSON = await resp.json();
-        if (msg.errno !== 0) {
+        if (resJSON.errno !== 0) {
             throw new Error(`Request rejected | errno=${resJSON.errno}, errmsg=${resJSON.errmsg}`);
         }
     } catch(err) {
