@@ -18,15 +18,18 @@ async function main() {
 
     const taskPolicy = {
         async run() {
-            for (const name of serviceNames) {
+            const tasks = serviceNames.map(async (name) => {
                 const service = await import(`./services/${name}.mjs`)
                 const taskReturn = await service.runTask(config[name]); // 预期是返回该服务的配置文件
+
                 if (taskReturn) {
                     config[name] = taskReturn
                 }
 
-                logger.info('签到任务执行完成', { service_name: name })
-            }
+                logger.info('任务执行完成', { service_name: name })
+            })
+
+            await Promise.allSettled(tasks)
         },
         async onError(err) {
             logger.error('Unexpected error.', err)
