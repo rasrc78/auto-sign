@@ -69,10 +69,10 @@ export class Session {
         return this.cookieJar;
     }
 
-    async fetch(url, {init = {}, cookieID = this.cookieID} = {}) {
+    async fetch(url, { init = {}, cookieID = this.cookieID } = {}) {
         const cookies = this.cookieJar.getHeaderString(cookieID);
         const headers = {...(init?.headers || {}), cookie: cookies};
-        url = new URL(url);
+        url = new URL(url)
 
         const response = await fetch(url, {...init, headers: headers, redirect: 'manual'});  // `init`相当于`fetch()`的同名参数。
 

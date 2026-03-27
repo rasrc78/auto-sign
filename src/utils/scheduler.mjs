@@ -1,11 +1,20 @@
 export class Scheduler {
     /**
-     * @param {object} taskPolicy
-     * @param {Function} taskPolicy.run - Async
-     * @param {Function} taskPolicy.onError - Optional / Async
-     * @param {Function} taskPolicy.onComplete - Optional / Async
-     * @param {object} schedulePolicy
-     * @param {Function} schedulePolicy.getNextRunTime
+     * @typedef {Object} TaskPolicy
+     * @property {() => Promise<void>} run - 执行主任务
+     * @property {(err: Error) => Promise<void>} [onError] - catch 块回调函数 | 注意：不会捕捉此函数的错误
+     * @property {() => Promise<void>} [onComplete] - finally 块回调函数 | 注意：不会捕捉此函数的错误
+     */
+
+    /**
+     * @typedef {Object} SchedulePolicy
+     * @property {() => number} getNextRunTime - 获取下次执行的时间戳
+     */
+
+    /**
+     * 执行任务调度
+     * @param {TaskPolicy} taskPolicy - 任务逻辑策略
+     * @param {SchedulePolicy} schedulePolicy - 调度频率策略
      */
     constructor(taskPolicy, schedulePolicy) {
         this.task = taskPolicy
