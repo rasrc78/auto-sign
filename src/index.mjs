@@ -1,8 +1,10 @@
-import { config, saveConfig } from './utils/config.mjs';
+import { loadConfig, saveConfig } from './utils/config.mjs';
 import { Logger } from './utils/logger.mjs';
-import { Scheduler } from './utils/scheduler.mjs'
+import { Scheduler } from './utils/scheduler.mjs';
 
+let config = loadConfig();
 const logger = new Logger('Main');
+
 
 async function main() {
     const serviceNames = Object.keys(config).filter(v => v !== 'general');
@@ -23,11 +25,11 @@ async function main() {
                     config[name] = taskReturn
                 }
 
-                logger.info(`签到任务执行成功 | service_name=${name}`)
+                logger.info('签到任务执行完成', { service_name: name })
             }
         },
         async onError(err) {
-            logger.error(err)
+            logger.error('Unexpected error.', err)
         },
         async onComplete() {
             saveConfig(config)
@@ -42,6 +44,6 @@ async function main() {
 try {
     await main()
 } catch(err) {
-    logger.error(err)
+    logger.error('Unexpected error.', err)
     process.exit(1);
 }
