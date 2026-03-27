@@ -1,15 +1,23 @@
 import path from 'node:path';
 import { appendFile, mkdir } from 'node:fs/promises';
-import { config } from './config.mjs';
+import { loadConfig } from './config.mjs';
 
-
+const config = loadConfig();
 const LOG_DIR = config?.general?.logPath;  // <string> 或 undefined
 const LOG_FILE_NAME = path.join(LOG_DIR, `${Date.now()}.log`);
 
 export class Logger {
     constructor(appName) {
         this.appName = appName
-        this.fileOutput = LOG_DIR ? true : false 
+        this.fileOutput = LOG_DIR ? true : false
+        this._levels = new Set(['DEBUG', 'INFO', 'WARN', 'ERROR'])
+
+        this._levels.forEach((level) => {
+            this[level.toLowerCase()] = async (message, detail) => {
+                await this.logging(`${message} ${this._formatDetail(detail, level)}`.trim(), level)
+            }
+        })
+
     }
 
     /**
@@ -20,16 +28,10 @@ export class Logger {
      */
     async logging(message, level = 'INFO') {
         const now = new Date();
-        const allowLevels = new Set(['DEBUG', 'INFO', 'WARN', 'ERROR']);
+        const appTag = this.appName ? `${this.appName}: ` : '';
+        level = this._levels.has(level.toUpperCase()) ? level.toUpperCase(): 'INFO'
 
-        if (message instanceof Error) {
-            message = message.stack.split('\n').slice(0, 2).map(str => str.trim()).join(' | ')
-            level = 'ERROR'
-        }
-
-        const appName = this.appName ? `[${this.appName}]` : '';
-        level = allowLevels.has(level.toUpperCase()) ? level.toUpperCase(): 'INFO'
-        message = `[${now.toISOString()}][${level}]${appName} ${message}`
+        message = `${now.toISOString()} ${`[${level}]`.padEnd(8)}${appTag}${message}`
         console.log(message)
 
         if (!this.fileOutput) return;
@@ -45,17 +47,17 @@ export class Logger {
     }
 
 
-    async debug(message) {
-        await this.logging(message, 'DEBUG')
-    }
-    async info(message) {
-        await this.logging(message, 'INFO')
-    }
-    async warn(message) {
-        await this.logging(message, 'WARN')
-    }
-    async error(message) {
-        await this.logging(message, 'ERROR')
+    _formatDetail(detail, level = 'INFO') {
+        if (!detail) return '';
+        if (detail instanceof Error) {
+            const errSummary = JSON.stringify({
+                errName: detail.name || 'Error',
+                errMsg: detail.message
+            });
+            const errStack = level === 'ERROR' ? `\n${detail.stack}` : '';
+            return `${errSummary}${errStack}`;
+        }
+        if (typeof detail === 'object') return JSON.stringify(detail);
+        return String(detail)
     }
 }
-

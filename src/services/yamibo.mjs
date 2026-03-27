@@ -1,4 +1,4 @@
-import { Session } from '../utils/session.mjs'
+import { Session } from '../utils/session.mjs';
 import { Logger } from '../utils/logger.mjs';
 import { zqljSign, checkLogin } from '../utils/discuz.mjs';
 
@@ -10,16 +10,13 @@ const indexUrl = new URL('https://bbs.yamibo.com');
 
 
 async function sign(init = {}) {
-    try {
-        const signMsg = await zqljSign(session, indexUrl, {init: init});
-        if (signMsg.errno === 0) {
-            logger.info(`签到成功 | msg=${signMsg.message}`)
-        } else {
-            throw Error(`Request rejected | errmsg=${signMsg.message}`);
-        }
-    } catch(err) {
-        logger.error(`签到时发生错误`)
-        throw err;
+    const signMsg = await zqljSign(session, indexUrl, {init: init});
+
+    if (signMsg.errno === 0) {
+        logger.info(`Sign-in successful.`, signMsg)
+    } else {
+        logger.error(`Sign-in failed.`, signMsg)
+        return;
     }
 }
 
@@ -34,15 +31,17 @@ export async function runTask(taskConfig) {
         }
 
         const loginStatus = await checkLogin(session, indexUrl, { init });
-        if (!loginStatus) throw new Error('登录失败');
+        if (!loginStatus) {
+            logger.error('Login failed.')
+            return;
+        }
 
-        await sign(init);
+        await sign(init)
 
-    } catch (err) {
-        logger.error(err)
-        throw new Error(`签到任务执行失败 | service_name=yamibo`);
-    } finally {
-        taskConfig.cookie = session.getCookies(COOKIE_ID)
-        return taskConfig;
+    } catch(err) {
+        logger.error('Unexpected error.', err)
     }
+
+    taskConfig.cookie = session.getCookies(COOKIE_ID)
+    return taskConfig;
 }
