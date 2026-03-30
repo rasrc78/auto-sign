@@ -47,7 +47,7 @@ export class Scheduler {
         this.nextRunAt = this.policy.getNextRunTime(now);
         const delay = Math.max(0, this.nextRunAt - now);
 
-        this.timerId = setTimeout(this._onTimeout, delay)
+        this.timerId = setTimeout(() => this._onTimeout(), delay)
     }
     
     async _onTimeout() {
