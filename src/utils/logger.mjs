@@ -1,63 +1,73 @@
-import path from 'node:path';
-import { appendFile, mkdir } from 'node:fs/promises';
-import { loadConfig } from './config.mjs';
+import path from 'node:path'
+import { mkdirSync } from 'node:fs'
+import { appendFile } from 'node:fs/promises'
 
-const config = loadConfig();
-const LOG_DIR = config?.general?.logPath;  // <string> 或 undefined
-const LOG_FILE_NAME = path.join(LOG_DIR, `${Date.now()}.log`);
+/**
+ * @typedef {Object} InitData
+ * @property {string} [logDir] - 存放日志的文件夹，缺省时不输出日志文件
+ */
 
+let logFileName
+let isInit = false
+
+/**
+ * 创建日志记录实例，支持持久化存储参数
+ * @param {string} label - 日志标签
+ * @param {InitData} [init] - 初始化数据
+ */
+export function createLogger(label, init = {}) {
+    if (!isInit) {
+        isInit = true
+        logFileName = init.logDir ? path.join(init.logDir, `${Date.now()}.log`) : null
+        mkdirSync(init.logDir, { recursive: true })
+    }
+
+    return new Logger(label, logFileName)
+}
+
+/**
+ * 日志记录类
+ */
 export class Logger {
-    constructor(appName) {
-        this.appName = appName
-        this.fileOutput = LOG_DIR ? true : false
+    /**
+     * @param {string} label - 日志标签
+     * @param {string} [logFileName] - 日志文件名，缺省时不输出文件
+     */
+    constructor(label, logFileName) {
+        this.appName = label
+        this.fileOutput = Boolean(logFileName)
         this._levels = new Set(['DEBUG', 'INFO', 'WARN', 'ERROR'])
 
         this._levels.forEach((level) => {
-            this[level.toLowerCase()] = async (message, detail) => {
-                await this.logging(`${message} ${this._formatDetail(detail, level)}`.trim(), level)
+            if (level === 'ERROR') return
+            this[level.toLowerCase()] = async (message) => {
+                await this.logging(message, level)
             }
         })
-
+        this.error = async (message, error) => {
+            if (error) {
+                message = `${message}\n>> ${error.stack.replace(/\n/g, '\n>> ')}`
+            }
+            await this.logging(message, 'ERROR')
+        }
     }
 
-    /**
-     * Output logging message.
-     * @async
-     * @param {(string | Error)} message
-     * @param {('DEBUG' | 'INFO' | 'WARN' | 'ERROR')} level
-     */
     async logging(message, level = 'INFO') {
-        const now = new Date();
-        const appTag = this.appName ? `${this.appName}: ` : '';
-        level = this._levels.has(level.toUpperCase()) ? level.toUpperCase(): 'INFO'
+        const now = new Date()
+        const appTag = this.appName ? `${this.appName}: ` : ''
+        level = this._levels.has(level.toUpperCase()) ? level.toUpperCase() : 'INFO'
 
         message = `${now.toISOString()} ${`[${level}]`.padEnd(8)}${appTag}${message}`
         console.log(message)
 
-        if (!this.fileOutput) return;
+        if (!this.fileOutput) return
 
         try {
-            await mkdir(path.join(LOG_DIR), { recursive: true })
-            await appendFile(LOG_FILE_NAME, String(message) + '\n', { mode: 0o664 })
-        } catch(err) {
+            await appendFile(logFileName, String(message) + '\n', { mode: 0o664 })
+        } catch (err) {
             this.fileOutput = false
-            await this.logging('写入日志文件时出错，已关闭日志文件输出', 'ERROR')
+            await this.logging('Log writing failed, log file output is closed.', 'ERROR')
             await this.logging(err, 'ERROR')
         }
-    }
-
-
-    _formatDetail(detail, level = 'INFO') {
-        if (!detail) return '';
-        if (detail instanceof Error) {
-            const errSummary = JSON.stringify({
-                errName: detail.name || 'Error',
-                errMsg: detail.message
-            });
-            const errStack = level === 'ERROR' ? `\n${detail.stack}` : '';
-            return `${errSummary}${errStack}`;
-        }
-        if (typeof detail === 'object') return JSON.stringify(detail);
-        return String(detail)
     }
 }
