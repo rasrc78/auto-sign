@@ -4,3 +4,4 @@ tests/
 logs/
 /config.json
 *.log
+*_test.*
