@@ -24,44 +24,6 @@ function saveConfig(config = {}) {
 // 初始化配置、日志记录
 const { config, logger } = init()
 
-// async function mainNew() {
-// let schedulers = {}
-
-// const serviceNames = Object.keys(config).filter((v) => v !== 'general')
-// serviceNames.forEach((serviceName) => {
-// const taskPolicy = {
-// async run() {
-// const service = await import(`./services/${serviceName}.mjs`)
-// const metadata = service.metadata
-
-// let serviceConfig = config[serviceName]
-
-// const taskReturn = await service.runTask(config[serviceName])
-
-// if (taskReturn) {
-// config[serviceName] = taskReturn
-// }
-
-// logger.info('任务执行完成', { service_name: name })
-// },
-// async onError(err) {
-// logger.error('Unexpected error.', err)
-// },
-// async onComplete() {
-// saveConfig(config)
-// },
-// }
-// const cron = config[serviceName]?.cron
-// schedulers[serviceName] = new Scheduler(task, cron, {
-// timeZone,
-// immediate,
-// })
-// schedulers[serviceName].start()
-// })
-
-// logger.info('总任务数：')
-// }
-
 async function main() {
     const onSchedulerError = (err) => {
         logger.error('Unexpected error in Scheduler.', err)
