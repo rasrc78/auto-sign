@@ -1,19 +1,6 @@
-import { Session } from '../utils/session.mjs'
+import { request } from "./utils.mjs"
 
 const INDEX_URL = new URL('https://www.zaimanhua.com')
-
-async function request(session, url, requestInit) {
-    if (!(session instanceof Session)) {
-        throw new Error('session is not instance of Session')
-    }
-
-    const resp = await session.fetch(url, requestInit)
-    if (!resp.ok) {
-        throw new Error(`HTTP Error. Status=${resp.status},URL=${resp.url.replace(/\?.+/, '')}`)
-    }
-
-    return resp
-}
 
 async function getCaptchaId(session, requestInit = {}) {
     try {
@@ -55,7 +42,7 @@ export async function loginApi(session, username, password, requestInit = {}) {
 
         const result = await resp.json()
         if (result.errno !== 0) {
-            throw new Error(`Login failed. message=${result.errmsg}`)
+            throw new Error(`Login failed. Message=${result.errmsg}`)
         }
 
         const userInfo = result.data.user
@@ -79,7 +66,7 @@ export async function signApi(session, token, requestInit = {}) {
 
         const result = await resp.json()
         if (result.errno !== 0) {
-            throw new Error(`Sign-in failed. message=${result.errmsg}`)
+            throw new Error(`Sign-in failed. Message=${result.errmsg}`)
         }
 
         return { success: true, message: result.errmsg}
@@ -102,7 +89,7 @@ export async function userInfoApi(session, token, requestInit = {}) {
 
         const result = await resp.json()
         if (result.errno !== 0) {
-            throw new Error(`Fetching user info failed. message=${result.errmsg}`)
+            throw new Error(`Fetching user info failed. Message=${result.errmsg}`)
         }
 
         return { success: true, data: result.data.userInfo }
