@@ -2,22 +2,28 @@ import { URL } from 'node:url'
 
 class Cookie {
     constructor() {
-        this._cookieMaps = new Map()
-        this._cookieMaps.set('default', new Map())
+        this._cookieJar = new Map()
+        this._cookieJar.set('default', new Map())
+    }
+
+    _getCookieMap(identifier) {
+        const cookieMap = this._cookieJar.get(identifier) || new Map()
+        // if (!cookieMap) throw new Error('Cookie not found.');
+        return cookieMap
     }
 
     setCookie(cookie, identifier = 'default') {
-        if (!this._cookieMaps.has(identifier)) {
-            this._cookieMaps.set(identifier, new Map())
+        if (!this._cookieJar.has(identifier)) {
+            this._cookieJar.set(identifier, new Map())
         }
-        const cookieMap = this._cookieMaps.get(identifier)
+        const cookieMap = this._cookieJar.get(identifier)
         const parsedCookie = cookie.match(/^([^=]+)=([^;]*)/)
 
         if (!parsedCookie) throw new Error('Cookie cannot be parsed.')
         cookieMap.set(parsedCookie[1], parsedCookie[2])
     }
 
-    getCookieValue(cookieName, identifier = 'default') {
+    getCookie(cookieName, identifier = 'default') {
         const cookieMap = this._getCookieMap(identifier)
         return cookieMap.get(cookieName)
     }
@@ -34,12 +40,6 @@ class Cookie {
     getObject(identifier = 'default') {
         const cookieMap = this._getCookieMap(identifier)
         return Object.fromEntries(cookieMap.entries())
-    }
-
-    _getCookieMap(identifier) {
-        const cookieMap = this._cookieMaps.get(identifier) || new Map()
-        // if (!cookieMap) throw new Error('Cookie not found.');
-        return cookieMap
     }
 }
 
@@ -71,6 +71,11 @@ export class Session {
         return this.cookieJar
     }
 
+    /**
+     * @param {string | globalThis.URL} url
+     * @param {RequestInit} [requestInit] - https://developer.mozilla.org/en-US/docs/Web/API/RequestInit
+     * @param {string} [cookieID] - 读写 Cookie 时使用的标识符
+     */
     async fetch(url, requestInit = {}, cookieID = this.cookieID) {
         const cookies = this.cookieJar.getHeaderString(cookieID)
         const headers = { ...(requestInit?.headers || {}), cookie: cookies }
