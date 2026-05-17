@@ -58,12 +58,12 @@ node src/index.mjs
 ```json
 "tasks": [
   {
-    "source": "zaimanhua",  // 提供任务函数的文件，这里称为“源”
-    "function": "sign",  // 要执行的功能（函数）
-    "cron": "45 11 * * *",  // POSIX Cron 表达式，示例为每天11:45分执行一次。缺省时执行一次任务后退出程序，可以搭配系统定时任务使用。
-    "immediately": true,  // 创建后立即执行一次任务，接受布尔值，默认为false
-    "data": {  // 传入任务的参数
-      "username": "yourname",  // 以下都是示例值，以对应的文档为准
+    "source": "zaimanhua",
+    "function": "sign",
+    "cron": "45 11 * * *", 
+    "immediately": true, 
+    "data": {
+      "username": "yourname",
       "password": "P@ssword",
       "cookie": "token=1145141919810"
     }
@@ -71,15 +71,24 @@ node src/index.mjs
 ]
 ```
 
+- `source`: 提供任务函数的文件，这里称为“源”
+- `function`: 要执行的功能（函数）
+- `cron`: POSIX Cron 表达式，示例为每天11:45分执行一次。缺省时执行一次任务后退出程序，可以搭配系统定时任务使用。
+- `immediately`: 创建后立即执行一次任务，接受布尔值，默认为false
+- `data`: 传入任务的配置，以“源”部分的文档为准
+  - `[任务配置项]` 
+
+**常见任务配置**
+
+- `cookie`：用于登录的 [Cookie](#获取-cookie)，使用 Netscape 格式，可以同时填写账号密码作为后备选项  
+- `username`：用户名  
+- `password`：明文密码  
+- `userAgent`：用户代理 (User-Agent)  
+
 > 不建议把签到时间设置太早，有的网站会取消凌晨的签到奖励。
 > 受调度器延迟和网络环境等多因素影响，执行时间可能有几秒到几分钟的误差。
 
-**常见参数**
 
-> `cookie`：用于登录的 [Cookie](#获取-cookie)，使用 Netscape 格式，可以同时填写账号密码作为后备选项
-> `username`：用户名
-> `password`：明文密码
-> `userAgent`：用户代理 (User agent)
 
 ### 源：再漫画
 
