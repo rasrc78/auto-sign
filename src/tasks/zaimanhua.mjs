@@ -33,7 +33,7 @@ async function signTask(taskData, saveDataCallback) {
         taskData.password = passwdToHash(taskData.password)
         const baseInit = {
             'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
-            'user-agent': taskData.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+            'user-agent': taskData.userAgent,
         }
 
         if (taskData.cookie) {
@@ -59,7 +59,7 @@ async function signTask(taskData, saveDataCallback) {
             logger.error(signResult.message)
             return
         } else {
-            logger.info(`Sign-in successful. message=${signResult.message}`)
+            logger.info(`Sign-in successful. Message=${signResult.message}`)
         }
     } catch (err) {
         logger.error('Unexpected error.', err)
