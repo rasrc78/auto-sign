@@ -1,6 +1,4 @@
-# 自动签到脚本
-
-解放你的双手，把时间花在更有意义的事情上。
+# Auto Sign-in Script 自动签到脚本（ASS）
 
 ## 支持列表
 
@@ -8,8 +6,8 @@
 | ---- | ---- | --------|
 | **再漫画** | zaimanhua.com | 密码、Cookie |
 | **百合会** | bbs.yamibo.com | Cookie |
-| **Anime字幕论坛** | bbs.acgrip.com | Cookie（未来可能支持密码） |
-| **天使动漫（计划）** | tsdm39.com | Cookie |
+| **Anime字幕论坛** | bbs.acgrip.com | Cookie |
+| **天使动漫（鸽）** | tsdm39.com | Cookie |
 
 ## 环境准备
 
@@ -18,7 +16,7 @@
 - Node.js (>= v18.20.8)
 - npm
 
-若还没有安装，可以在[Node.js 官网](https://nodejs.org/zh-cn/download)获取。
+若没有安装，可以在[Node.js 官网](https://nodejs.org/zh-cn/download)获取。
 
 ## 快速开始
 
@@ -45,39 +43,72 @@ node src/index.mjs
 
 - `general`：通用选项，适用于所有服务。
   - `[通用配置项]`
-- `<服务名>`：可以在下面的列表中查看支持的服务。
-  - `[服务配置项]`
+- `tasks`: 
+  - `[任务1]`
+  - `[任务2]`
 
 ### 通用配置项
 
 - `general`
-  - `logPath`：日志文件路径，值为`false`或不存在表示关闭日志文件输出。
-  - `schedule`：每日签到时间，格式`hh:mm:ss`，默认`00:00:00`。
+  - `logPath`：日志文件路径，缺省时关闭日志文件输出。
+  - `defaultUserAgent`：默认用户代理 (User agent)，缺省时为`node`。
 
-> 不建议把签到时间设置太早，有的平台会取消凌晨的签到奖励。
+### 任务基本配置
 
-### 服务：再漫画（Beta）
+```json
+"tasks": [
+  {
+    "source": "zaimanhua",  // 提供任务函数的文件，这里称为“源”
+    "function": "sign",  // 要执行的功能（函数）
+    "cron": "45 11 * * *",  // POSIX Cron 表达式，示例为每天11:45分执行一次。缺省时执行一次任务后退出程序，可以搭配系统定时任务使用。
+    "immediately": true,  // 创建后立即执行一次任务，接受布尔值，默认为false
+    "data": {  // 传入任务的参数
+      "username": "yourname",  // 以下都是示例值，以对应的文档为准
+      "password": "P@ssword",
+      "cookie": "token=1145141919810"
+    }
+  }
+]
+```
 
-- `zaimanhua`：记得使用这个名字替换`<服务名>`。
-    - `cookie`：用于登录的[Cookie](#获取-cookie)，一般填了这个就不用再填账号密码。
-    - `username`：*用户名* 或 *登录账号*。
-    - `password`：*明文密码* 或 *明文密码的小写MD5*。如果输入的是明文密码，会在首次运行时替换为哈希值。注意，如果明文密码格式和MD5相同，则不会进行自动替换。
-    - `userAgent`：用户代理 (User agent)，默认为空。
+> 不建议把签到时间设置太早，有的网站会取消凌晨的签到奖励。
+> 受调度器延迟和网络环境等多因素影响，执行时间可能有几秒到几分钟的误差。
 
-### 服务：百合会（Beta）
+**常见参数**
 
-- `yamibo`
-    - `cookie`：用于登录的[Cookie](#获取-cookie)。账密登录需要验证码，暂时没考虑添加。
-    - `userAgent`：用户代理 (User agent)，默认为空。
+> `cookie`：用于登录的 [Cookie](#获取-cookie)，使用 Netscape 格式，可以同时填写账号密码作为后备选项
+> `username`：用户名
+> `password`：明文密码
+> `userAgent`：用户代理 (User agent)
 
-### 服务：Anime 字幕论坛（Beta）
+### 源：再漫画
 
-- `animesubs`
+- `source`: `zaimanhua`
+- `function`: `sign`
+- `data`
+  - `cookie`
+  - `username`
+  - `password`：*明文密码* 或 *明文密码的小写MD5*。如果输入的是明文密码，会在首次运行时替换为哈希值。注意，如果明文密码格式和MD5相同，不会进行自动替换。
+  - `userAgent`
+
+### 源：百合会
+
+- `source`: `yamibo`
+- `function`: `sign`
+- `data`
+    - `cookie`
+    - `userAgent`
+
+### 源：Anime 字幕论坛
+
+- `source`: `animesubs`
+- `function`: `sign`
+- `data`
   - `cookie`
   - `userAgent`
   - `signOptions`：签到选项。
     - `mood`：签到心情，可用选项因网站而异，默认为`kx`（开心）。在*网站签到页*能看到心情名称，一般取*小写的拼音首字母*作为值，单字心情则取*完整拼音*，如`shuai`（衰）和`yl`（慵懒）。
-    - `mode`: 今日最想说模式，默认为`3`。可用选项有`1`（自己填写），`2`（快速选择），`3`（不想填写）。
+    - `mode`: 今日最想说模式，默认为`3`。可用值有`1`（自己填写），`2`（快速选择），`3`（不想填写）。
     - `message`：签到文字，`mode`为`1`时必须填写，默认为空字符串。
     - `fastReply`：快速选择的签到文字，`mode`为`2`时生效，默认为`0`。在网站签到页，每往下面一个选项，值+1，通常可用值为`0`-`7`。
 
@@ -86,13 +117,18 @@ node src/index.mjs
 ```json
 {
   "general" : {
-    "logPath": "./logs",
-    "schedule": "11:45:14"
+    "logPath": "./logs"
   },
-  "zaimanhua": {
-      "cookie": "token=XXXXX",
-      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.7559.53 Safari/537.36"
-  }
+  "tasks": [
+    {
+      "source": "zaimanhua",
+      "function": "sign",
+      "cron": "0 8 * * *",
+      "data": {
+        "cookie": "token=xxxxxx"
+      }
+    }
+  ]
 }
 ```
 
