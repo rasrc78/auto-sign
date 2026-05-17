@@ -29,6 +29,9 @@ export class Scheduler {
     start() {
         if (!this.active) {
             this.active = true
+            if (this.immediately) {
+                this._onTimeout()
+            }
             this._scheduleNext()
         }
     }
