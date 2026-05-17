@@ -52,11 +52,20 @@ async function main() {
                 return
             }
 
-            const scheduler = new Scheduler(() => taskMeta.functions[taskConfig.function](taskConfig.data, saveTaskData), taskConfig.cron, {
-                onError: onSchedulerError,
-                immediately: taskConfig.immediately || false,
-            })
-            scheduler.start()
+            if (typeof taskConfig.data === 'object' && taskConfig.data.userAgent === undefined) {
+                taskConfig.data.userAgent = config.general.defaultUserAgent
+            }
+
+            const task = () => taskMeta.functions[taskConfig.function](taskConfig.data, saveTaskData)
+            if (taskConfig.cron) {
+                const scheduler = new Scheduler(task, taskConfig.cron, {
+                    onError: onSchedulerError,
+                    immediately: taskConfig.immediately || false,
+                })
+                scheduler.start()
+            } else {
+                task()
+            }
 
         } catch (err) {
             if (err.code === 'ERR_MODULE_NOT_FOUND') {
@@ -67,7 +76,10 @@ async function main() {
             }
         }
     }
-    await Promise.all(config.tasks.map(taskRunner))
+
+    if (config.tasks) {
+        await Promise.all(config.tasks?.map(taskRunner))
+    }
 }
 
 try {
